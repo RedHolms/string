@@ -1,0 +1,10 @@
+# CMake Output
+build
+build/*
+out
+out/*
+
+# Visual Studio
+CMakePresets.json
+.vs
+.vs/*
