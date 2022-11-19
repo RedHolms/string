@@ -5,15 +5,153 @@
 
 #include <type_traits>
 
+template <class StringType, typename CharType>
+struct string_iterator {
+  using encoding = typename StringType::encoding;
+  using char_type = CharType;
+  
+  using size_type = typename StringType::size_type;
+  using difference_type = typename StringType::difference_type;
+  
+  /* reference emulator */
+  struct _CharDescriptor {
+    _CharDescriptor(char_type* p, StringType* s) : Ptr(p), StringContainer(s) {}
+
+    string_iterator operator&() {
+      return string_iterator(Ptr, StringContainer);
+    }
+
+    operator char_type&() {
+      return *Ptr;
+    }
+
+    operator char_type() {
+      return *Ptr;
+    }
+
+    _CharDescriptor& operator=(const char_type* chr) {
+      auto chr_len = encoding::chrlen(chr);
+      auto orig_chr_len = encoding::chrlen(Ptr);
+      
+      if (chr_len < orig_chr_len) {
+        difference_type diff = orig_chr_len - chr_len;
+
+        StringContainer->_move_left(Ptr + chr_len, diff);
+      }
+      else if (chr_len > orig_chr_len) {
+        difference_type diff = chr_len - orig_chr_len;
+
+        StringContainer->_want_size(diff);
+        StringContainer->_move_right(Ptr + chr_len, diff);
+      }
+
+      memcpy(Ptr, chr, chr_len * sizeof(char_type));
+    }
+
+    char_type* Ptr = nullptr;
+    StringType* StringContainer = nullptr;
+  };
+  
+  using char_descriptor = typename std::conditional<
+    encoding::need_char_descriptor,
+    _CharDescriptor,
+    char_type&
+  >::type;
+
+  string_iterator(char_type* p, StringType* s) : Ptr(p), StringContainer(s) {}
+
+  char_descriptor operator*() {
+    if constexpr (StringType::encoding::need_char_descriptor) {
+      return char_descriptor(Ptr, StringContainer);
+    }
+    else {
+      return *Ptr;
+    }
+  }
+
+  operator char_type* () {
+    return Ptr;
+  }
+
+  char_descriptor operator[](difference_type off) const noexcept {
+    char_type* chr_ptr = StringType::encoding::index(Ptr, off);
+    
+    if constexpr (StringType::encoding::need_char_descriptor) {
+      return char_descriptor(chr_ptr, StringContainer);
+    }
+    else {
+      return *chr_ptr;
+    }
+  }
+  
+  string_iterator& operator++() noexcept {
+    ++Ptr;
+    return *this;
+  }
+
+  string_iterator operator++(int) noexcept {
+    string_iterator temp = *this;
+    ++Ptr;
+    return temp;
+  }
+
+  string_iterator& operator--() noexcept {
+    --Ptr;
+    return *this;
+  }
+
+  string_iterator operator--(int) noexcept {
+    string_iterator temp = *this;
+    --Ptr;
+    return temp;
+  }
+
+  string_iterator& operator+=(difference_type off) noexcept {
+    Ptr += off;
+    return *this;
+  }
+
+  string_iterator& operator-=(difference_type off) noexcept {
+    Ptr -= off;
+    return *this;
+  }
+
+  string_iterator operator+(difference_type off) const noexcept {
+    return string_iterator(Ptr + off);
+  }
+
+  string_iterator operator-(difference_type off) const noexcept {
+    return string_iterator(Ptr - off);
+  }
+
+  char_type* Ptr = nullptr;
+  StringType* StringContainer = nullptr;
+};
+
+template <class StringType, typename CharType>
+string_iterator<StringType, CharType> operator+(
+  typename string_iterator<StringType, CharType>::difference_type off,
+  string_iterator<StringType, CharType> next
+) noexcept {
+  next += off;
+  return next;
+}
+
 template <typename Encoding>
 class string {
 public:
+  using _Type = string<Encoding>;
+  
   using encoding      = Encoding;
   using char_table    = typename Encoding::char_table;
   using char_type     = typename Encoding::char_type;
   using max_char_type = typename Encoding::max_char_type;
 
   using size_type = size_t;
+  using difference_type = ptrdiff_t;
+
+  using iterator = string_iterator<_Type, char_type>;
+  using const_iterator = string_iterator<_Type, const char_type>;
 
 public:
   string() = default;
@@ -61,10 +199,15 @@ public:
   string<NewEncoding> convert() const {
     using new_char_type = typename NewEncoding::char_type;
     
+    static_assert(std::is_same<char_table, typename NewEncoding::char_table>::value, "convertation impossible");
+    
+    if constexpr (std::is_same<Encoding, NewEncoding>::value) {
+      return *this;
+    }
+
     string<NewEncoding> result;
 
     if (m_buffer && m_buffer[0]) {
-      static_assert(std::is_same<char_table, typename NewEncoding::char_table>::value, "convertation impossible");
 
       if constexpr (std::is_same<char_table, typename NewEncoding::char_table>::value) {
         size_type size = Encoding::strsize(m_buffer);
@@ -87,22 +230,30 @@ public:
   }
 
 public:
-  // get pointer to the first element in the buffer
-  char_type* begin() {
-    return m_buffer;
+  iterator operator[](size_type i) {
+    return *iterator(Encoding::index(m_buffer, i), this);
   }
 
-  const char_type* begin() const {
-    return m_buffer;
+  const_iterator operator[](size_type i) const {
+    return *const_iterator(Encoding::index(m_buffer, i), this);
+  }
+
+  // get pointer to the first element in the buffer
+  iterator begin() {
+    return iterator(m_buffer, this);
+  }
+
+  const_iterator begin() const {
+    return const_iterator(m_buffer, this);
   }
 
   // get pointer to the last element in the buffer
-  char_type* end() {
-    return Encoding::index(m_buffer, Encoding::strlen(m_buffer));
+  iterator end() {
+    return iterator(Encoding::index(m_buffer, Encoding::strlen(m_buffer)), this);
   }
 
-  const char_type* end() const {
-    return Encoding::index(m_buffer, Encoding::strlen(m_buffer));
+  const_iterator end() const {
+    return const_iterator(Encoding::index(m_buffer, Encoding::strlen(m_buffer)), this);
   }
 
 public:
@@ -121,6 +272,46 @@ public:
     return m_buffer;
   }
 
+  char_type* data() {
+    return m_buffer;
+  }
+
+  const char_type* data() const {
+    return m_buffer;
+  }
+
+public:
+  //template <typename AnotherEncoding>
+  //bool operator==(const string<AnotherEncoding>& o) {
+  //  return *this == o.convert<Encoding>();
+  //}
+
+  bool operator==(const string& o) {
+    return *this == o.m_buffer;
+  }
+
+  bool operator==(const char_type* s) {
+    auto buff_size = Encoding::strsize(m_buffer);
+    auto str_size = Encoding::strsize(s);
+
+    if (buff_size != str_size) return false;
+
+    return memcmp(m_buffer, s, buff_size * sizeof(char_type)) == 0;
+  }
+
+  //template <typename AnotherEncoding>
+  //bool operator!=(const string<AnotherEncoding>& o) {
+  //  return *this != o.convert<Encoding>();
+  //}
+
+  bool operator!=(const string& o) {
+    return *this != o.m_buffer;
+  }
+
+  bool operator!=(const char_type* s) {
+    return !(*this == s);
+  }
+
 public:
   // append data to the end of buffer
   void append(const char_type* str) {
@@ -132,10 +323,36 @@ public:
 
     _want_size(size + 1);
 
-    auto start_place = end();
+    auto start_place = end().Ptr;
     
     memcpy(start_place, str, size * sizeof(char_type));
     start_place[size] = 0;
+  }
+
+  // insert data in the buffer
+  void insert(size_type i, const char_type* str) {
+    insert(i, str, Encoding::strlen(str));
+  }
+
+  void insert(size_type i, const char_type* str, size_type length) {
+    auto size = Encoding::strsize(str, length);
+    bool contained_string = this->length() > 0;
+
+    _want_size(size + 1);
+
+    _move_right(i, size);
+    memcpy(Encoding::index(m_buffer, i), str, size * sizeof(char_type));
+    
+    if (!contained_string)
+      Encoding::index(m_buffer, i)[size] = 0;
+  }
+
+  void insert(const_iterator it, const char_type* str) {
+    insert(it, str, Encoding::strlen(str));
+  }
+
+  void insert(const_iterator it, const char_type* str, size_type length) {
+    insert(static_cast<size_type>(it.Ptr - m_buffer), str, length);
   }
 
 private:
@@ -146,6 +363,18 @@ private:
 
     if (gap < size)
       _growth(m_allocated + size);
+  }
+
+  void _move_right(size_type index, size_type off) {
+    auto buffer_size = Encoding::strsize(m_buffer);
+    for (difference_type i = buffer_size - 1; i >= static_cast<difference_type>(index); --i)
+      m_buffer[i + off] = m_buffer[i];
+  }
+
+  void _move_left(size_type index, size_type off) {
+    auto buffer_size = Encoding::strsize(m_buffer);
+    for (difference_type i = index; i < buffer_size; ++i)
+      m_buffer[i - off] = m_buffer[i];
   }
 
   // growth the buffer (assert new allocated size >= `size`)
@@ -223,6 +452,7 @@ struct UTF8 {
   using size_type = size_t;
 
   static constexpr size_type max_char_length = 4;
+  static constexpr bool need_char_descriptor = true;
 
   static constexpr char_type* index(char_type* s, size_type i) {
     for (size_type j = 0; s && j < i; j++, s += chrlen(s));
@@ -324,14 +554,14 @@ struct UTF8 {
     }
     else if (decoded <= 0xFFFF) {
       dest[0] = 0xE0 | (char_type)((decoded >> 12) & 0x0F);
-      dest[1] = 0x80 | (char_type)((decoded >> 5) & 0x3F);
+      dest[1] = 0x80 | (char_type)((decoded >> 6) & 0x3F);
       dest[2] = 0x80 | (char_type)((decoded) & 0x3F);
       used_ref = 3;
     }
     else if (decoded <= 0x10FFFF) {
       dest[0] = 0xF0 | (char_type)((decoded >> 18) & 0x07);
       dest[1] = 0x80 | (char_type)((decoded >> 12) & 0x3F);
-      dest[2] = 0x80 | (char_type)((decoded >> 5) & 0x3F);
+      dest[2] = 0x80 | (char_type)((decoded >> 6) & 0x3F);
       dest[3] = 0x80 | (char_type)((decoded) & 0x3F);
       used_ref = 4;
     }
@@ -347,6 +577,7 @@ struct UTF16 {
   using size_type = size_t;
 
   static constexpr size_type max_char_length = 2;
+  static constexpr bool need_char_descriptor = true;
 
   static constexpr char_type* index(char_type* s, size_type i) {
     for (size_type j = 0; s && j < i; j++, s += chrlen(s));
@@ -442,6 +673,7 @@ struct UTF32 {
   using size_type = size_t;
 
   static constexpr size_type max_char_length = 1;
+  static constexpr bool need_char_descriptor = false;
 
   static constexpr char_type* index(char_type* s, size_type i) {
     return s + i;
