@@ -2,6 +2,4 @@
 
 project("string")
 
-add_executable("string" "test.cpp")
-
-set_property(TARGET "string" PROPERTY CXX_STANDARD 17)
+add_subdirectory("tests")

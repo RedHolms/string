@@ -5,6 +5,5 @@ out
 out/*
 
 # Visual Studio
-CMakePresets.json
 .vs
 .vs/*
