@@ -1,9 +1,9 @@
 # CMake Output
 build
-build/*
 out
-out/*
 
 # Visual Studio
 .vs
-.vs/*
+
+# temporal
+tests
