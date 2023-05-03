@@ -4,6 +4,4 @@ out
 
 # Visual Studio
 .vs
-
-# temporal
-tests
+CMakeSettings.json

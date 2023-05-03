@@ -1,4 +1,5 @@
 #pragma once
+#define EString_EStringEncodings_h_
 
 /*
 * This file constains basic encoding traits.
@@ -19,7 +20,7 @@ struct EncodingTraits;
 class encoding_failed : public std::exception {
 public:
   encoding_failed(const char* target_encoding, const char* info)
-    : m_target_encoding(target_encoding), std::exception(info) {}
+    : std::exception(info), m_target_encoding(target_encoding) {}
 
   const char* get_target_encoding() const noexcept { return m_target_encoding; }
 

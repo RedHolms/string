@@ -4,9 +4,9 @@
 #include <Windows.h>
 #endif
 
-static void decode_data_from_console(std::string const& buffer, String& out_str);
+static void decode_data_from_console(std::string const& buffer, EString& out_str);
 
-std::basic_istream<char, std::char_traits<char>>& operator>>(std::basic_istream<char, std::char_traits<char>>& stream, String& out_str) {
+std::basic_istream<char, std::char_traits<char>>& operator>>(std::basic_istream<char, std::char_traits<char>>& stream, EString& out_str) {
   std::string buffer;
   stream >> buffer;
 
@@ -17,7 +17,7 @@ std::basic_istream<char, std::char_traits<char>>& operator>>(std::basic_istream<
 
 #ifdef _WIN32
 
-static void decode_data_from_console(std::string const& buffer, String& out_str) {
+static void decode_data_from_console(std::string const& buffer, EString& out_str) {
   unsigned int console_code_page = GetConsoleCP();
 
   wchar_t* wide_buffer = new wchar_t[buffer.size()];

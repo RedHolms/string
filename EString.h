@@ -1,5 +1,7 @@
 #pragma once
+#define EString_EString_h_
 
+#include <assert.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -8,29 +10,29 @@
 
 #include "EStringEncodings.h"
 
-class String {
+class EString {
 public:
   using size_type = size_t;
 
 public:
-  constexpr String() = default;
+  constexpr EString() = default;
 
-  constexpr String(const char32_t* utf32_string) : String() {
+  constexpr EString(const char32_t* utf32_string) : EString() {
     size_type string_size = Utf32EncodingTraits::str_length(utf32_string);
 
     _construct_with_string_and_size(utf32_string, string_size);
   }
 
-  constexpr String(const char32_t* utf32_string, size_type string_size_in_chars) : String() {
+  constexpr EString(const char32_t* utf32_string, size_type string_size_in_chars) : EString() {
     _construct_with_string_and_size(utf32_string, string_size_in_chars);
   }
 
   template <typename CharType>
-  constexpr String(const CharType* encoded_string, size_type encoded_string_length_in_chars) : String() {
+  constexpr EString(const CharType* encoded_string, size_type encoded_string_length_in_chars) : EString() {
     decode(encoded_string, encoded_string_length_in_chars);
   }
 
-  constexpr String(size_type count, char32_t character = 0) : String() {
+  constexpr EString(size_type count, char32_t character = 0) : EString() {
     _need_allocated(count);
 
     for (size_type i = 0; i < count; ++i)
@@ -38,12 +40,12 @@ public:
   }
 
   template <typename CharType>
-  constexpr String(const CharType* encoded_string) : String(encoded_string, EncodingTraits<CharType>::str_length(encoded_string)) {}
+  constexpr EString(const CharType* encoded_string) : EString(encoded_string, EncodingTraits<CharType>::str_length(encoded_string)) {}
 
   template <typename CharType>
-  constexpr String(std::basic_string<CharType, std::char_traits<CharType>> const& encoded_string) : String(encoded_string.c_str(), encoded_string.length()) {}
+  constexpr EString(std::basic_string<CharType, std::char_traits<CharType>> const& encoded_string) : EString(encoded_string.c_str(), encoded_string.length()) {}
 
-  constexpr String(String const& other) : String() {
+  constexpr EString(EString const& other) : EString() {
     _need_allocated(other.m_length + 1);
 
     for (size_type i = 0; i < other.m_length; ++i)
@@ -52,7 +54,7 @@ public:
     m_buffer[other.m_length] = 0;
   }
 
-  constexpr String(String&& other) {
+  constexpr EString(EString&& other) noexcept {
     m_buffer = other.m_buffer;
     m_length = other.m_length;
     m_allocated = other.m_allocated;
@@ -106,67 +108,67 @@ public:
   }
 
 public:
-  constexpr char32_t& front() {
+  constexpr char32_t& front() noexcept {
     return m_buffer[0];
   }
 
-  constexpr char32_t front() const {
+  constexpr char32_t front() const noexcept {
     return m_buffer[0];
   }
 
-  constexpr char32_t& back() {
+  constexpr char32_t& back() noexcept {
     return m_buffer[m_length - 1];
   }
 
-  constexpr char32_t back() const {
+  constexpr char32_t back() const noexcept {
     return m_buffer[m_length - 1];
   }
 
-  constexpr char32_t* data() {
+  constexpr char32_t* data() noexcept {
     return m_buffer;
   }
 
-  constexpr const char32_t* data() const {
+  constexpr const char32_t* data() const noexcept {
     return m_buffer;
   }
 
-  constexpr char32_t* begin() {
+  constexpr char32_t* begin() noexcept {
     return m_buffer;
   }
 
-  constexpr const char32_t* begin() const {
+  constexpr const char32_t* begin() const noexcept {
     return m_buffer;
   }
 
-  constexpr const char32_t* cbegin() const {
+  constexpr const char32_t* cbegin() const noexcept {
     return m_buffer;
   }
 
-  constexpr char32_t* end() {
+  constexpr char32_t* end() noexcept {
     return m_buffer;
   }
 
-  constexpr const char32_t* end() const {
+  constexpr const char32_t* end() const noexcept {
     return m_buffer;
   }
 
-  constexpr const char32_t* cend() const {
+  constexpr const char32_t* cend() const noexcept {
     return m_buffer;
   }
 
-  constexpr bool is_empty() const {
+  constexpr bool is_empty() const noexcept {
     return !m_buffer || m_length == 0;
   }
 
-  constexpr size_type length() const {
+  constexpr size_type length() const noexcept {
     return m_length;
   }
 
-  constexpr size_type size() const {
+  constexpr size_type size() const noexcept {
     return m_length;
   }
 
-  constexpr size_type max_size() const {
+  constexpr size_type max_size() const noexcept {
     return static_cast<size_type>(~0) / sizeof(char32_t);
   }
 
@@ -174,7 +176,7 @@ public:
     _need_allocated(count);
   }
 
-  constexpr size_type capacity() const {
+  constexpr size_type capacity() const noexcept {
     return m_allocated;
   }
 
@@ -184,44 +186,59 @@ public:
     }
   }
 
-  constexpr void clear() {
+  constexpr void clear() noexcept {
     m_buffer[0] = 0;
     m_length = 0;
   }
 
-  constexpr String& insert(size_type index, size_type count, char32_t character) {
+  constexpr EString& insert(size_type index, size_type count, char32_t character) {
     _need_allocated(m_length + count + 1);
-    _move_right(index, count);
+    _move_right(index, m_length - index, count);
 
     for (size_type i = 0; i < count; ++i, ++index)
       m_buffer[index] = character;
-    m_length = index;
+
+    m_length += count;
 
     return *this;
   }
 
-  constexpr String& insert(size_type index, const char32_t* string) {
+  constexpr EString& insert(size_type index, const char32_t* string) {
     return insert(index, string, Utf32EncodingTraits::str_length(string));
   }
 
-  constexpr String& insert(size_type index, const char32_t* string, size_type string_length_in_characters) {
+  constexpr EString& insert(size_type index, const char32_t* string, size_type string_length_in_characters) {
     _need_allocated(m_length + string_length_in_characters + 1);
-    _move_right(index, string_length_in_characters);
+    _move_right(index, m_length - index, string_length_in_characters);
 
     for (size_type i = 0; i < string_length_in_characters; ++i, ++index)
       m_buffer[index] = string[i];
-    m_length = index;
+
+    m_length += string_length_in_characters;
 
     return *this;
   }
 
-  constexpr String& insert(size_type index, String const& string) {
+  constexpr EString& insert(size_type index, EString const& string) {
     return insert(index, string.m_buffer, string.m_length);
   }
 
-  constexpr String& erase(size_type index, size_type count) {
-    _move_left(index, count);
-    m_length = index + count;
+  constexpr EString& erase(size_type index, size_type count) {
+    if (index >= m_length) {
+      // Debug report.
+      assert(!"Trying to erase characters out of string buffer");
+      return *this;
+    }
+
+    if (index + count > m_length) {
+      // Debug report.
+      assert(!"Trying to erase characters out of string buffer");
+      return *this;
+    }
+
+    _move_left(index + count, m_length - (index + count), count);
+
+    m_length -= count;
     m_buffer[m_length] = 0;
 
     return *this;
@@ -229,22 +246,22 @@ public:
 
 public:
   template <typename CharType>
-  constexpr String& operator=(const CharType* encoded_string) {
+  constexpr EString& operator=(const CharType* encoded_string) {
     decode(encoded_string);
     return *this;
   }
 
   template <typename CharType>
-  constexpr String& operator=(std::basic_string<CharType, std::char_traits<CharType>> const& encoded_string) {
+  constexpr EString& operator=(std::basic_string<CharType, std::char_traits<CharType>> const& encoded_string) {
     decode(encoded_string);
     return *this;
   }
 
-  constexpr char32_t& operator[](size_type index) {
+  constexpr char32_t& operator[](size_type index) noexcept {
     return m_buffer[index];
   }
 
-  constexpr char32_t operator[](size_type index) const {
+  constexpr char32_t operator[](size_type index) const noexcept {
     return m_buffer[index];
   }
 
@@ -286,14 +303,24 @@ private:
     m_length = string_size_in_chars;
   }
 
-  constexpr void _move_right(size_type index, size_type count) {
-    for (size_type i = 0; i < count; ++i, ++index)
-      m_buffer[index + count] = m_buffer[index];
+  // Move all characters in range [index, index + count) by 'amount' characters to right
+  constexpr void _move_right(size_type index, size_type count, size_type amount) noexcept {
+    char32_t* rbegin = m_buffer + index + count - 1;
+    char32_t* rend = m_buffer + index - 1;
+
+    for (char32_t* it = rbegin; it != rend; --it) {
+      it[amount] = it[0];
+    }
   }
 
-  constexpr void _move_left(size_type index, size_type count) {
-    for (size_type i = 0; i < count; ++i, ++index)
-      m_buffer[index - count] = m_buffer[index];
+  // Move all characters in range [index, index + count) by 'amount' characters to left
+  constexpr void _move_left(size_type index, size_type count, size_type amount) noexcept {
+    char32_t* begin = m_buffer + index;
+    char32_t* end = m_buffer + index + count;
+
+    for (char32_t* it = begin; it != end; ++it) {
+      it[-amount] = it[0];
+    }
   }
 
 private:
@@ -303,7 +330,4 @@ private:
   char32_t* m_buffer = nullptr;
 };
 
-// Implimented in EString_Streams.cpp because
-//  of complicated decoding logic.
-// May be pretty slow.
-std::basic_istream<char, std::char_traits<char>>& operator>>(std::basic_istream<char, std::char_traits<char>>& stream, String& out_str);
+std::basic_istream<char, std::char_traits<char>>& operator>>(std::basic_istream<char, std::char_traits<char>>& stream, EString& out_str);
