@@ -30,9 +30,18 @@ namespace InsertingTests {
 
     TEST(StringsInsertingTests, InsertingStringToEnd) {
       EString string = "Hello";
-      EString second_string = ", world!";
+      const char32_t* second_string = U", world!";
 
       string.insert(string.length(), second_string);
+
+      EXPECT_STREQ(ESTR(string), "Hello, world!");
+    }
+
+    TEST(StringsInsertingTests, InsertingEncodedStringInMiddle) {
+      EString string = "Herld!";
+      const char16_t* second_string = u"llo, wo";
+
+      string.insert(2, second_string);
 
       EXPECT_STREQ(ESTR(string), "Hello, world!");
     }

@@ -203,10 +203,6 @@ public:
     return *this;
   }
 
-  constexpr EString& insert(size_type index, const char32_t* string) {
-    return insert(index, string, Utf32EncodingTraits::str_length(string));
-  }
-
   constexpr EString& insert(size_type index, const char32_t* string, size_type string_length_in_characters) {
     _need_allocated(m_length + string_length_in_characters + 1);
     _move_right(index, m_length - index, string_length_in_characters);
@@ -219,8 +215,33 @@ public:
     return *this;
   }
 
+  constexpr EString& insert(size_type index, const char32_t* string) {
+    return insert(index, string, Utf32EncodingTraits::str_length(string));
+  }
+
   constexpr EString& insert(size_type index, EString const& string) {
     return insert(index, string.m_buffer, string.m_length);
+  }
+
+  template <typename CharType>
+  constexpr EString& insert(size_type index, const CharType* string, size_type string_length_in_characters) {
+    using encoding_traits = EncodingTraits<CharType>;
+
+    char32_t* buffer = new char32_t[string_length_in_characters];
+    size_type buffer_size = encoding_traits::to_utf32(string, string_length_in_characters, buffer);
+
+    insert(index, buffer, buffer_size);
+
+    delete[] buffer;
+
+    return *this;
+  }
+
+  template <typename CharType>
+  constexpr EString& insert(size_type index, const CharType* string) {
+    using encoding_traits = EncodingTraits<CharType>;
+
+    return insert(index, string, encoding_traits::str_length(string));
   }
 
   constexpr EString& erase(size_type index, size_type count) {
@@ -296,8 +317,8 @@ private:
   constexpr void _construct_with_string_and_size(const char32_t* utf32_string, size_type string_size_in_chars) {
     _need_allocated(string_size_in_chars + 1);
 
-    for (size_type index = 0; index < string_size_in_chars; ++string_size_in_chars)
-      m_buffer[index * sizeof(char32_t)] = utf32_string[index * sizeof(char32_t)];
+    for (size_type index = 0; index < string_size_in_chars; ++index)
+      m_buffer[index] = utf32_string[index];
 
     m_buffer[string_size_in_chars] = 0;
     m_length = string_size_in_chars;

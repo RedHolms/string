@@ -18,6 +18,7 @@ add_executable(
   EStringTests
 
   "StringModifyingTests.cpp"
+  "EncodingsTests.cpp"
   
   "${PROJECT_SOURCE_DIR}/EString.cpp"
 )

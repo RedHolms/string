@@ -189,7 +189,7 @@ struct Utf8EncodingTraits {
       )
       char_from_utf32(decoded_string[0], dest);
 
-    return static_cast<size_type>(static_cast<ptrdiff_t>(dest - begin) + 1);
+    return static_cast<size_type>(dest - begin);
   }
 
   static constexpr size_type to_utf32(const encoded_char_type* encoded_string, size_type decoded_string_size_in_chars, char32_t* dest) {
@@ -202,7 +202,7 @@ struct Utf8EncodingTraits {
       )
       dest[0] = char_to_utf32(encoded_string);
 
-    return static_cast<size_type>(static_cast<ptrdiff_t>(dest - begin) + 1);
+    return static_cast<size_type>(dest - begin);
   }
 
   static constexpr size_type char_length(const encoded_char_type* encoded_char) {
@@ -290,20 +290,20 @@ struct Utf16EncodingTraits {
       )
       char_from_utf32(decoded_string[0], dest);
 
-    return static_cast<size_type>(static_cast<ptrdiff_t>(dest - begin) + 1);
+    return static_cast<size_type>(dest - begin);
   }
 
-  static constexpr size_type to_utf32(const encoded_char_type* encoded_string, size_type decoded_string_size_in_chars, char32_t* dest) {
+  static constexpr size_type to_utf32(const encoded_char_type* encoded_string, size_type encoded_string_size_in_chars, char32_t* dest) {
     const char32_t* begin = dest;
 
     for (
-      const encoded_char_type* end = encoded_string;
+      const encoded_char_type* end = encoded_string + encoded_string_size_in_chars;
       encoded_string != end;
       ++dest, encoded_string += char_length(encoded_string)
       )
       dest[0] = char_to_utf32(encoded_string);
 
-    return static_cast<size_type>(static_cast<ptrdiff_t>(dest - begin) + 1);
+    return static_cast<size_type>(dest - begin);
   }
 
   static constexpr size_type char_length(const encoded_char_type* encoded_char) {
