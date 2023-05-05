@@ -113,3 +113,35 @@ namespace ErasingTests {
   }
 
 }
+
+namespace AppendingTests {
+
+  TEST(AppendingTests, AppendUtf32String) {
+    EString string = U"Hello";
+
+    string.append(", world!");
+
+    EXPECT_STREQ(ESTR(string), "Hello, world!");
+  }
+
+  TEST(AppendingTests, AppendCharacters) {
+    EString string = U"Hello, world!";
+
+    string.append(2, U'!');
+
+    EXPECT_STREQ(ESTR(string), "Hello, world!!!");
+  }
+
+  TEST(AppendingTests, AppendEncodedString) {
+    EString string = U"Hello";
+
+    string.append(u8", мир!");
+
+    std::u8string encoded_string = string.encode<char8_t>();
+
+    const char* gared_string = reinterpret_cast<const char*>(encoded_string.c_str());
+
+    EXPECT_STREQ(gared_string, "Hello, мир!");
+  }
+
+}

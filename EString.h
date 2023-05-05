@@ -199,6 +199,7 @@ public:
       m_buffer[index] = character;
 
     m_length += count;
+    m_buffer[m_length] = 0;
 
     return *this;
   }
@@ -211,6 +212,7 @@ public:
       m_buffer[index] = string[i];
 
     m_length += string_length_in_characters;
+    m_buffer[m_length] = 0;
 
     return *this;
   }
@@ -263,6 +265,59 @@ public:
     m_buffer[m_length] = 0;
 
     return *this;
+  }
+
+  constexpr EString& append(size_type count, char32_t character) {
+    _need_allocated(m_length + count + 1);
+
+    for (size_type counter = 0, index = m_length; counter < count; ++counter, ++index)
+      m_buffer[index] = character;
+
+    m_length += count;
+    m_buffer[m_length] = 0;
+
+    return *this;
+  }
+
+  constexpr EString& append(const char32_t* string, size_type string_length_in_characters) {
+    _need_allocated(m_length + string_length_in_characters + 1);
+
+    for (size_type i = 0, index = m_length; i < string_length_in_characters; ++i, ++index)
+      m_buffer[index] = string[i];
+
+    m_length += string_length_in_characters;
+    m_buffer[m_length] = 0;
+
+    return *this;
+  }
+
+  constexpr EString& append(const char32_t* string) {
+    return append(string, Utf32EncodingTraits::str_length(string));
+  }
+
+  constexpr EString& append(EString const& string) {
+    return append(string.m_buffer, string.m_length);
+  }
+
+  template <typename CharType>
+  constexpr EString& append(const CharType* string, size_type string_length_in_characters) {
+    using encoding_traits = EncodingTraits<CharType>;
+
+    char32_t* buffer = new char32_t[string_length_in_characters];
+    size_type buffer_size = encoding_traits::to_utf32(string, string_length_in_characters, buffer);
+
+    append(buffer, buffer_size);
+
+    delete[] buffer;
+
+    return *this;
+  }
+
+  template <typename CharType>
+  constexpr EString& append(const CharType* string) {
+    using encoding_traits = EncodingTraits<CharType>;
+
+    return append(string, encoding_traits::str_length(string));
   }
 
 public:
