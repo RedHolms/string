@@ -71,15 +71,15 @@ struct AsciiEncodingTraits {
   }
 
   // Decode string from given encoding to utf32.
-  // Note: 'decoded_string_size_in_chars' is a size
+  // Note: 'encoded_string_size_in_chars' is a size
   //  of 'encoded_string' in 'encoded_char_type'
   // Returns number of 'char32_t' written to 'dest'
-  static constexpr size_type to_utf32(const encoded_char_type* encoded_string, size_type decoded_string_size_in_chars, char32_t* dest) {
-    for (size_type index = 0; index < decoded_string_size_in_chars; ++index, ++encoded_string) {
+  static constexpr size_type to_utf32(const encoded_char_type* encoded_string, size_type encoded_string_size_in_chars, char32_t* dest) {
+    for (size_type index = 0; index < encoded_string_size_in_chars; ++index, ++encoded_string) {
       dest[index] = char_to_utf32(encoded_string);
     }
 
-    return decoded_string_size_in_chars;
+    return encoded_string_size_in_chars;
   }
 
   // Get length of abstract character in 'encoded_char_type',
@@ -192,11 +192,11 @@ struct Utf8EncodingTraits {
     return static_cast<size_type>(dest - begin);
   }
 
-  static constexpr size_type to_utf32(const encoded_char_type* encoded_string, size_type decoded_string_size_in_chars, char32_t* dest) {
+  static constexpr size_type to_utf32(const encoded_char_type* encoded_string, size_type encoded_string_size_in_chars, char32_t* dest) {
     const char32_t* begin = dest;
 
     for (
-      const encoded_char_type* end = encoded_string + decoded_string_size_in_chars;
+      const encoded_char_type* end = encoded_string + encoded_string_size_in_chars;
       encoded_string != end;
       ++dest, encoded_string += char_length(encoded_string)
       )
@@ -348,11 +348,11 @@ struct Utf32EncodingTraits {
     return decoded_string_size_in_utf32_chars;
   }
 
-  static constexpr size_type to_utf32(const encoded_char_type* encoded_string, size_type decoded_string_size_in_chars, char32_t* dest) {
-    for (size_type index = 0; index < decoded_string_size_in_chars; ++index)
+  static constexpr size_type to_utf32(const encoded_char_type* encoded_string, size_type encoded_string_size_in_chars, char32_t* dest) {
+    for (size_type index = 0; index < encoded_string_size_in_chars; ++index)
       dest[index] = encoded_string[index];
 
-    return decoded_string_size_in_chars;
+    return encoded_string_size_in_chars;
   }
 
   static constexpr size_type char_length(const encoded_char_type* encoded_char) {
@@ -403,11 +403,11 @@ struct WideEncodingTraits {
     return decoded_string_size_in_utf32_chars;
   }
 
-  static constexpr size_type to_utf32(const encoded_char_type* encoded_string, size_type decoded_string_size_in_chars, char32_t* dest) {
-    for (size_type index = 0; index < decoded_string_size_in_chars; ++index, ++encoded_string)
+  static constexpr size_type to_utf32(const encoded_char_type* encoded_string, size_type encoded_string_size_in_chars, char32_t* dest) {
+    for (size_type index = 0; index < encoded_string_size_in_chars; ++index, ++encoded_string)
       dest[index] = char_to_utf32(encoded_string);
 
-    return decoded_string_size_in_chars;
+    return encoded_string_size_in_chars;
   }
 
   static constexpr size_type char_length(const encoded_char_type* encoded_char) {
@@ -458,7 +458,7 @@ struct AnsiEncodingTraits {
   static size_type char_from_utf32(char32_t original_char, encoded_char_type* dest);
   static char32_t char_to_utf32(const encoded_char_type* encoded_char);
   static size_type from_utf32(const char32_t* decoded_string, size_type decoded_string_size_in_utf32_chars, encoded_char_type* dest);
-  static size_type to_utf32(const encoded_char_type* encoded_string, size_type decoded_string_size_in_chars, char32_t* dest);
+  static size_type to_utf32(const encoded_char_type* encoded_string, size_type encoded_string_size_in_chars, char32_t* dest);
   static size_type char_length(const encoded_char_type* encoded_char);
   static size_type str_length(const encoded_char_type* string);
 };

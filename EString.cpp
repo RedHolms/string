@@ -57,7 +57,7 @@ size_type AnsiEncodingTraits::from_utf32(const char32_t* decoded_string, size_ty
   throw encoding_failed(AnsiEncodingTraits::encoding_name, "Ansi not implimented.");
 }
 
-size_type AnsiEncodingTraits::to_utf32(const encoded_char_type* encoded_string, size_type decoded_string_size_in_chars, char32_t* dest) {
+size_type AnsiEncodingTraits::to_utf32(const encoded_char_type* encoded_string, size_type encoded_string_size_in_chars, char32_t* dest) {
   throw encoding_failed(AnsiEncodingTraits::encoding_name, "Ansi not implimented.");
 }
 

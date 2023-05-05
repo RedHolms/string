@@ -46,21 +46,38 @@ public:
   constexpr EString(std::basic_string<CharType, std::char_traits<CharType>> const& encoded_string) : EString(encoded_string.c_str(), encoded_string.length()) {}
 
   constexpr EString(EString const& other) : EString() {
+    operator=(other);
+  }
+
+  constexpr EString(EString&& other) noexcept {
+    operator=(std::move(other));
+  }
+
+  constexpr EString& operator=(EString const& other) {
     _need_allocated(other.m_length + 1);
 
     for (size_type i = 0; i < other.m_length; ++i)
       m_buffer[i] = other.m_buffer[i];
 
     m_buffer[other.m_length] = 0;
+
+    return *this;
   }
 
-  constexpr EString(EString&& other) noexcept {
+  constexpr EString& operator=(EString&& other) noexcept {
     m_buffer = other.m_buffer;
     m_length = other.m_length;
     m_allocated = other.m_allocated;
     other.m_buffer = nullptr;
     other.m_length = 0;
     other.m_allocated = 0;
+
+    return *this;
+  }
+
+  constexpr ~EString() {
+    m_length = 0;
+    _reallocate(0);
   }
 
 public:
@@ -204,6 +221,10 @@ public:
     return *this;
   }
 
+  constexpr EString& insert(size_type index, char32_t character) {
+    return insert(index, 1, character);
+  }
+
   constexpr EString& insert(size_type index, const char32_t* string, size_type string_length_in_characters) {
     _need_allocated(m_length + string_length_in_characters + 1);
     _move_right(index, m_length - index, string_length_in_characters);
@@ -279,6 +300,10 @@ public:
     return *this;
   }
 
+  constexpr EString& append(char32_t character) {
+    return append(1, character);
+  }
+
   constexpr EString& append(const char32_t* string, size_type string_length_in_characters) {
     _need_allocated(m_length + string_length_in_characters + 1);
 
@@ -321,6 +346,49 @@ public:
   }
 
 public:
+  constexpr bool operator==(EString const& string) const noexcept {
+    if ((&string) == this)
+      return true; // this == this
+
+    return _is_equal(string.m_buffer, string.m_length);
+  }
+
+  constexpr bool operator==(const char32_t* string) const noexcept {
+    return _is_equal(string, Utf32EncodingTraits::str_length(string));
+  }
+
+  template <typename CharType>
+  constexpr bool operator==(const CharType* string) const {
+    using encoding_traits = EncodingTraits<CharType>;
+
+    return _is_equal_encoded(string, encoding_traits::str_length(string));
+  }
+
+  template <typename CharType>
+  constexpr bool operator==(std::basic_string<CharType, std::char_traits<CharType>> const& string) const {
+    return _is_equal_encoded(string.c_str(), string.length());
+  }
+
+
+  constexpr bool operator!=(EString const& string) const noexcept {
+    return !operator==(string);
+  }
+
+  constexpr bool operator!=(const char32_t* string) const noexcept {
+    return !operator==(string);
+  }
+
+  template <typename CharType>
+  constexpr bool operator!=(const CharType* string) const {
+    return !operator==(string);
+  }
+
+  template <typename CharType>
+  constexpr bool operator!=(std::basic_string<CharType, std::char_traits<CharType>> const& string) const {
+    return !operator==(string);
+  }
+
+
   template <typename CharType>
   constexpr EString& operator=(const CharType* encoded_string) {
     decode(encoded_string);
@@ -358,13 +426,19 @@ private:
     char32_t* prev_buffer = m_buffer;
     size_type prev_allocated = m_allocated;
 
-    m_buffer = new char32_t[new_size];
     m_allocated = new_size;
+    m_buffer = nullptr;
 
-    memset(m_buffer, 0, m_allocated * sizeof(char32_t));
+    if (new_size > 0) {
+      m_buffer = new char32_t[new_size];
+      memset(m_buffer, 0, m_allocated * sizeof(char32_t));
+
+      if (prev_buffer) {
+        memcpy(m_buffer, prev_buffer, prev_allocated * sizeof(char32_t));
+      }
+    }
 
     if (prev_buffer) {
-      memcpy(m_buffer, prev_buffer, prev_allocated * sizeof(char32_t));
       delete[] prev_buffer;
     }
   }
@@ -397,6 +471,31 @@ private:
     for (char32_t* it = begin; it != end; ++it) {
       it[-amount] = it[0];
     }
+  }
+
+  constexpr bool _is_equal(const char32_t* string, size_type string_size) const noexcept {
+    if (string_size != m_length)
+      return false;
+
+    for (size_type index = 0; index < m_length; ++index)
+      if (string[index] != m_buffer[index])
+        return false;
+
+    return true;
+  }
+
+  template <typename CharType>
+  constexpr bool _is_equal_encoded(const CharType* string, size_type string_size) const {
+    using encoding_traits = EncodingTraits<CharType>;
+
+    char32_t* buffer = new char32_t[string_size];
+    size_type buffer_size = encoding_traits::to_utf32(string, string_size, buffer);
+
+    bool result = _is_equal(buffer, buffer_size);
+
+    delete[] buffer;
+
+    return result;
   }
 
 private:
