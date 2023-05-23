@@ -16,7 +16,6 @@ TEST(test_suite_name, test_name) {\
 
 #define DECODING_TEST(test_suite_name, test_name, target_char_type, target_string, expected_string) \
 TEST(test_suite_name, test_name) {\
-  using string_type = std::basic_string<target_char_type, std::char_traits<target_char_type>>;\
   using string_view_type = std::basic_string_view<target_char_type, std::char_traits<target_char_type>>;\
   string_view_type original_string = target_string;\
   EString string;\

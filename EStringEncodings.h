@@ -91,7 +91,7 @@ struct AsciiEncodingTraits {
   }
 
   // Get length of string in 'encoded_char_type'
-  static constexpr size_type str_length(const encoded_char_type* string) {
+  static constexpr size_type str_length(const encoded_char_type* string) noexcept {
     size_type length = 0;
 
     // Iterate until null-terminating character is reached.
@@ -220,7 +220,7 @@ struct Utf8EncodingTraits {
     throw encoding_failed(encoding_name, "Invalid UTF-8 character.");
   }
 
-  static constexpr size_type str_length(const encoded_char_type* string) {
+  static constexpr size_type str_length(const encoded_char_type* string) noexcept {
     size_type length = 0;
 
     for (; *string; ++length)
@@ -313,7 +313,7 @@ struct Utf16EncodingTraits {
       return 1;
   }
 
-  static constexpr size_type str_length(const encoded_char_type* string) {
+  static constexpr size_type str_length(const encoded_char_type* string) noexcept {
     size_type length = 0;
 
     for (; *string; ++length)
@@ -360,7 +360,7 @@ struct Utf32EncodingTraits {
     return 1;
   }
 
-  static constexpr size_type str_length(const encoded_char_type* string) {
+  static constexpr size_type str_length(const encoded_char_type* string) noexcept {
     size_type length = 0;
 
     for (; *string; ++length)
@@ -415,7 +415,7 @@ struct WideEncodingTraits {
     return 1;
   }
 
-  static constexpr size_type str_length(const encoded_char_type* string) {
+  static constexpr size_type str_length(const encoded_char_type* string) noexcept {
     size_type length = 0;
 
     for (; *string; ++length)
