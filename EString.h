@@ -408,7 +408,7 @@ public:
     return startswith(string.c_str(), string.length());
   }
 
-  constexpr bool endswith(const char32_t* string, size_type string_length) const {
+  constexpr bool endswith(const char32_t* string, size_type string_length) const noexcept {
     if (string_length > m_length)
       return false;
 
@@ -419,11 +419,11 @@ public:
     return true;
   }
 
-  constexpr bool endswith(const char32_t* string) const {
+  constexpr bool endswith(const char32_t* string) const noexcept {
     return endswith(string, Utf32EncodingTraits::str_length(string));
   }
 
-  constexpr bool endswith(const EString& string) const {
+  constexpr bool endswith(const EString& string) const noexcept {
     return endswith(string.m_buffer, string.m_length);
   }
 
@@ -466,6 +466,52 @@ public:
   template <typename CharType>
   constexpr bool endswith(std::basic_string<CharType, std::char_traits<CharType>> const& string) const {
     return endswith(string.c_str(), string.length());
+  }
+
+  constexpr bool contains(const char32_t* string, size_type string_length_in_utf32_chars) const noexcept {
+    if (string_length_in_utf32_chars == m_length)
+      return _is_str_equal(string, string_length_in_utf32_chars);
+    else if (string_length_in_utf32_chars > m_length)
+      return false;
+
+    for (size_type search_end = m_length - string_length_in_utf32_chars, base_index = 0; base_index < search_end; ++base_index) {
+      bool found = true;
+
+      for (size_type checking_index = base_index, string_index = 0; string_index < string_length_in_utf32_chars; ++checking_index, ++string_index) {
+        if (m_buffer[checking_index] != string[string_index]) {
+          found = false;
+          break;
+        }
+      }
+
+      if (!found)
+        continue;
+
+      return true;
+    }
+
+    return false;
+  }
+
+  constexpr bool contains(const char32_t* string) const noexcept {
+    return contains(string, Utf32EncodingTraits::str_length(string));
+  }
+
+  constexpr bool contains(EString const& string) const noexcept {
+    return contains(string.m_buffer, string.m_length);
+  }
+  
+  template <typename CharType>
+  constexpr bool contains(const CharType* string, size_type string_length_in_chars) const {
+    using encoding_traits = EncodingTraits<CharType>;
+
+    char32_t* buffer = new char32_t[string_length_in_chars];
+    size_type buffer_size = encoding_traits::to_utf32(string, string_length_in_chars, buffer);
+
+    bool is_contains = contains(buffer, buffer_size);
+    
+    delete[] buffer;
+    return is_contains;
   }
 
 public:

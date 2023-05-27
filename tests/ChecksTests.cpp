@@ -63,3 +63,26 @@ namespace EndsWithTests {
   }
 
 }
+
+namespace ContainsTests {
+
+  TEST(ContainsTests, ContainsEString) {
+    EString string = U"Привет, мир!";
+    EString sub_string = U"мир";
+
+    EXPECT_TRUE(string.contains(sub_string));
+  }
+
+  TEST(ContainsTests, ContainsUtf32) {
+    EString string = U"Привет, мир!";
+
+    EXPECT_TRUE(string.contains(U"мир"));
+  }
+
+  TEST(ContainsTests, ContainsUtf8) {
+    EString string = U"Привет, мир!";
+
+    EXPECT_TRUE(string.contains(u8"мир"));
+  }
+
+}
