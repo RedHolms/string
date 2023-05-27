@@ -7,6 +7,7 @@
 
 #include <string>
 #include <istream>
+#include <vector>
 
 #include "EStringEncodings.h"
 
@@ -271,7 +272,7 @@ public:
     return insert(index, string, encoding_traits::str_length(string));
   }
 
-  constexpr EString& erase(size_type index, size_type count) {
+  constexpr EString& erase(size_type index, size_type count) noexcept {
     if (index >= m_length) {
       // Debug report.
       assert(!"Trying to erase characters out of string buffer");
@@ -349,15 +350,42 @@ public:
     return append(string, encoding_traits::str_length(string));
   }
 
+  constexpr void push_back(char32_t character) noexcept {
+    _need_allocated(m_length + 1 + 1);
+
+    m_buffer[m_length] = character;
+    m_length += 1;
+    m_buffer[m_length] = 0;
+  }
+
+  template <typename CharType>
+  constexpr void push_back(const CharType* character) noexcept {
+    using encoding_traits = EncodingTraits<CharType>;
+
+    char32_t utf32_character = encoding_traits::char_to_utf32(character);
+    push_back(utf32_character);
+  }
+
+  template <typename CharType, typename = std::enable_if_t<!std::is_pointer_v<CharType>>>
+  constexpr void push_back(CharType character) {
+    push_back(&character);
+  }
+
+  constexpr char32_t pop_back() noexcept {
+    if (m_length == 0)
+      return 0;
+
+    char32_t character = m_buffer[--m_length];
+    m_buffer[m_length] = 0;
+
+    return character;
+  }
+
   constexpr bool startswith(const char32_t* string, size_type string_length) const noexcept {
     if (string_length > m_length)
       return false;
 
-    for (size_type index = 0; index < string_length; ++index)
-      if (m_buffer[index] != string[index])
-        return false;
-
-    return true;
+    return _is_substr_equal(0, string, string_length);
   }
 
   constexpr bool startswith(const char32_t* string) const noexcept {
@@ -385,15 +413,10 @@ public:
       return is_equal;
     }
 
-    for (size_type index = 0; index < buffer_size; ++index) {
-      if (m_buffer[index] != buffer[index]) {
-        delete[] buffer;
-        return false;
-      }
-    }
+    bool is_endswith = _is_substr_equal(0, buffer, buffer_size);
 
     delete[] buffer;
-    return true;
+    return is_endswith;
   }
 
   template <typename CharType>
@@ -412,11 +435,7 @@ public:
     if (string_length > m_length)
       return false;
 
-    for (size_type index = m_length - string_length, str_index = 0; index < m_length; ++index, ++str_index)
-      if (m_buffer[index] != string[str_index])
-        return false;
-
-    return true;
+    return _is_substr_equal(m_length - string_length, string, string_length);
   }
 
   constexpr bool endswith(const char32_t* string) const noexcept {
@@ -445,15 +464,10 @@ public:
       return is_equal;
     }
 
-    for (size_type index = m_length - buffer_size, str_index = 0; index < m_length; ++index, ++str_index) {
-      if (m_buffer[index] != buffer[str_index]) {
-        delete[] buffer;
-        return false;
-      }
-    }
+    bool is_endswith = _is_substr_equal(m_length - buffer_size, buffer, buffer_size);
 
     delete[] buffer;
-    return true;
+    return is_endswith;
   }
 
   template <typename CharType>
@@ -475,19 +489,9 @@ public:
       return false;
 
     for (size_type search_end = m_length - string_length_in_utf32_chars, base_index = 0; base_index < search_end; ++base_index) {
-      bool found = true;
-
-      for (size_type checking_index = base_index, string_index = 0; string_index < string_length_in_utf32_chars; ++checking_index, ++string_index) {
-        if (m_buffer[checking_index] != string[string_index]) {
-          found = false;
-          break;
-        }
+      if (_is_substr_equal(base_index, string, string_length_in_utf32_chars)) {
+        return true;
       }
-
-      if (!found)
-        continue;
-
-      return true;
     }
 
     return false;
@@ -509,16 +513,13 @@ public:
     size_type buffer_size = encoding_traits::to_utf32(string, string_length_in_chars, buffer);
 
     bool is_contains = contains(buffer, buffer_size);
-    
+
     delete[] buffer;
     return is_contains;
   }
 
 public:
   constexpr bool operator==(EString const& string) const noexcept {
-    if ((&string) == this)
-      return true; // this == this
-
     return _is_str_equal(string.m_buffer, string.m_length);
   }
 
@@ -585,6 +586,14 @@ public:
   }
 
 private:
+  constexpr bool _is_substr_equal(size_type index, const char32_t* string, size_type string_size_in_utf32_chars) const noexcept {
+    for (size_type string_index = 0; string_index < string_size_in_utf32_chars; ++index, ++string_index) {
+      if (m_buffer[index] != string[string_index])
+        return false;
+    }
+    return true;
+  }
+
   // Assert that 'm_buffer' can store 'size' characters.
   // If not, reallocate buffer.
   constexpr void _need_allocated(size_type size) {
@@ -658,6 +667,9 @@ private:
 
   // Check is data in 'm_buffer' equal to data in 'string'.
   constexpr bool _is_str_equal(const char32_t* string, size_type string_size_in_utf32_chars) const noexcept {
+    if (m_buffer == string)
+      return true;
+
     if (string_size_in_utf32_chars != m_length)
       return false;
 

@@ -145,3 +145,36 @@ namespace AppendingTests {
   }
 
 }
+
+namespace PushPopTests {
+
+  TEST(PushPopTests, PushBackASCIITest) {
+    EString string = U"Привет, мир";
+
+    string.push_back('!');
+
+    EXPECT_EQ(string.encode<char32_t>(), U"Привет, мир!");
+  }
+
+  TEST(PushPopTests, PushBackUTF8Test) {
+    EString string = U"Привет, ми";
+
+    string.push_back(u8"р");
+
+    EXPECT_EQ(string.encode<char32_t>(), U"Привет, мир");
+  }
+
+  TEST(PushPopTests, NormalPopBackTest) {
+    EString string = U"Привет, мир!!";
+
+    EXPECT_EQ(string.pop_back(), U'!');
+    EXPECT_EQ(string.encode<char32_t>(), U"Привет, мир!");
+  }
+
+  TEST(PushPopTests, PopBackOutOfBufferTest) {
+    EString string;
+
+    EXPECT_EQ(string.pop_back(), 0);
+  }
+
+}
