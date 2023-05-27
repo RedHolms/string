@@ -37,6 +37,11 @@ static void decode_data_from_console(std::string const& buffer, EString& out_str
   delete[] wide_buffer;
 }
 
+#else
+
+static void decode_data_from_console(std::string const& buffer, EString& out_str) {
+  throw std::runtime_error("not implimented");
+}
 #endif
 
 // ANSI encoding

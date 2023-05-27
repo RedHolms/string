@@ -108,8 +108,19 @@ namespace ErasingTests {
   TEST(ErasingTests, EraseOutOfBuffer) {
     EString string = "Hello, world!";
     
-    // Will cause assertation failure.
-    EXPECT_DEATH(string.erase(string.length() + 1, 5), "Trying to erase characters out of string buffer");
+    size_t prev_allocated = string.capacity();
+    size_t prev_size = string.length();
+    char32_t* prev_data = string.data();
+
+    string.erase(11, 5);
+    EXPECT_EQ(string.capacity(), prev_allocated);
+    EXPECT_EQ(string.length(), prev_size);
+    EXPECT_EQ(string.data(), prev_data);
+
+    string.erase(20, 3);
+    EXPECT_EQ(string.capacity(), prev_allocated);
+    EXPECT_EQ(string.length(), prev_size);
+    EXPECT_EQ(string.data(), prev_data);
   }
 
 }

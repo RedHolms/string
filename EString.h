@@ -274,14 +274,10 @@ public:
 
   constexpr EString& erase(size_type index, size_type count) noexcept {
     if (index >= m_length) {
-      // Debug report.
-      assert(!"Trying to erase characters out of string buffer");
       return *this;
     }
 
     if (index + count > m_length) {
-      // Debug report.
-      assert(!"Trying to erase characters out of string buffer");
       return *this;
     }
 
@@ -613,7 +609,7 @@ private:
   }
 
   // Reallocate 'm_buffer' with size 'new_size' and copy data from old buffer to new one.
-  void _reallocate(size_type new_size) {
+  constexpr void _reallocate(size_type new_size) {
     char32_t* prev_buffer = m_buffer;
     size_type prev_allocated = m_allocated;
 
@@ -656,7 +652,7 @@ private:
   }
 
   // Move all characters in range [index, index + count) by 'amount' characters to left.
-  constexpr void _move_left(size_type index, size_type count, size_type amount) noexcept {
+  constexpr void _move_left(size_type index, size_type count, int amount) noexcept {
     char32_t* begin = m_buffer + index;
     char32_t* end = m_buffer + index + count;
 

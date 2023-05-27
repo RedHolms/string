@@ -4,8 +4,8 @@
 include(FetchContent)
 FetchContent_Declare(
   googletest
-  URL https://github.com/google/googletest/archive/f345b2ca6adb1b505049190867eedf24d3b5eaa3.zip
   DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  URL "https://github.com/google/googletest/archive/f345b2ca6adb1b505049190867eedf24d3b5eaa3.zip"
 )
 
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)

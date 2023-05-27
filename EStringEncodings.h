@@ -20,11 +20,13 @@ struct EncodingTraits;
 class encoding_failed : public std::exception {
 public:
   encoding_failed(const char* target_encoding, const char* info)
-    : std::exception(info), m_target_encoding(target_encoding) {}
+    : std::exception(), m_info(info), m_target_encoding(target_encoding) {}
 
+  const char* what() const noexcept { return m_info; }
   const char* get_target_encoding() const noexcept { return m_target_encoding; }
 
 private:
+  const char* m_info;
   const char* m_target_encoding;
 };
 
