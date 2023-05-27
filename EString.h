@@ -55,11 +55,12 @@ public:
 
   constexpr EString& operator=(EString const& other) {
     _need_allocated(other.m_length + 1);
+    m_length = other.m_length;
 
-    for (size_type i = 0; i < other.m_length; ++i)
+    for (size_type i = 0; i < m_length; ++i)
       m_buffer[i] = other.m_buffer[i];
 
-    m_buffer[other.m_length] = 0;
+    m_buffer[m_length] = 0;
 
     return *this;
   }
@@ -108,10 +109,9 @@ public:
     using encoding_traits = EncodingTraits<CharType>;
 
     _need_allocated(encoded_string_length_in_chars + 1);
-    m_length = encoded_string_length_in_chars;
 
-    size_type written = encoding_traits::to_utf32(encoded_string, encoded_string_length_in_chars, m_buffer);
-    m_buffer[written] = 0;
+    m_length = encoding_traits::to_utf32(encoded_string, encoded_string_length_in_chars, m_buffer);
+    m_buffer[m_length] = 0;
   }
 
   template <typename CharType>
@@ -139,6 +139,10 @@ public:
 
   constexpr char32_t back() const noexcept {
     return m_buffer[m_length - 1];
+  }
+
+  constexpr const char32_t* c_str() const noexcept {
+    return m_buffer;
   }
 
   constexpr char32_t* data() noexcept {
@@ -539,8 +543,18 @@ private:
   // If not, reallocate buffer.
   constexpr void _need_allocated(size_type size) {
     if (m_allocated < size) {
-      _reallocate(size + size / 2);
+      _growth(size);
     }
+  }
+
+  // Growth the buffer, so it's size will be >= min_size
+  constexpr void _growth(size_type min_size) {
+    size_type want_allocate = m_allocated + m_allocated / 2;
+
+    if (want_allocate < min_size)
+      want_allocate = min_size;
+
+    _reallocate(want_allocate);
   }
 
   // Reallocate 'm_buffer' with size 'new_size' and copy data from old buffer to new one.
@@ -636,5 +650,40 @@ private:
   // Buffer for string value.
   char32_t* m_buffer = nullptr;
 };
+
+constexpr EString& operator+=(EString& string, EString const& other) {
+  string.append(other);
+  return string;
+}
+
+constexpr EString& operator+=(EString& string, const char32_t* other) {
+  string.append(other);
+  return string;
+}
+
+template <typename CharType>
+constexpr EString& operator+=(EString& string, const CharType* other) {
+  string.append(other);
+  return string;
+}
+
+constexpr EString operator+(EString const& left, EString const& right) {
+  EString result = left;
+  result += right;
+  return result;
+}
+
+constexpr EString operator+(EString const& left, const char32_t* right) {
+  EString result = left;
+  result += right;
+  return result;
+}
+
+template <typename CharType>
+constexpr EString operator+(EString const& left, const CharType* right) {
+  EString result = left;
+  result += right;
+  return result;
+}
 
 std::basic_istream<char, std::char_traits<char>>& operator>>(std::basic_istream<char, std::char_traits<char>>& stream, EString& out_str);

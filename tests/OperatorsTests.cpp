@@ -44,3 +44,26 @@ namespace ComparisonOperatorsTests {
   }
 
 }
+
+namespace ConcatenatingTests {
+
+  TEST(ConcatenatingTests, ConcatenateWithEString) {
+    EString string = "Hello";
+    EString other = ", world!";
+
+    EXPECT_STREQ((string + other).encode<char>().c_str(), "Hello, world!");
+  }
+
+  TEST(ConcatenatingTests, ConcatenateWithUTF32) {
+    EString string = "Hello";
+
+    EXPECT_STREQ((string + U", world!").encode<char>().c_str(), "Hello, world!");
+  }
+
+  TEST(ConcatenatingTests, ConcatenateWithUTF8) {
+    EString string = "Hello";
+
+    EXPECT_STREQ((string + u8", world!").encode<char>().c_str(), "Hello, world!");
+  }
+
+}
