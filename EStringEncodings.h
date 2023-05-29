@@ -232,9 +232,9 @@ struct Utf8EncodingTraits {
   }
 };
 
-template <typename CustomEncodedCharType = char16_t>
-struct Utf16EncodingTraits {
-  using encoded_char_type = CustomEncodedCharType;
+template <typename EncodedCharType>
+struct _Utf16EncodingTraits_Base {
+  using encoded_char_type = EncodedCharType;
 
   using size_type = size_t;
 
@@ -244,12 +244,12 @@ struct Utf16EncodingTraits {
 
   static constexpr size_type char_from_utf32(char32_t original_char, encoded_char_type* dest) {
     if (original_char <= 0xFFFF) {
-      dest[0] = static_cast<CustomEncodedCharType>(original_char & 0xFFFF);
+      dest[0] = static_cast<EncodedCharType>(original_char & 0xFFFF);
 
       return 1;
     }
     else {
-      CustomEncodedCharType character2 = static_cast<CustomEncodedCharType>(original_char - 0x10000);
+      EncodedCharType character2 = static_cast<EncodedCharType>(original_char - 0x10000);
 
       dest[1] = 0xDC00 | (character2 & 0xFF);
       character2 >>= 8;
@@ -263,8 +263,8 @@ struct Utf16EncodingTraits {
     encoded_char_type first_word = encoded_char[0];
 
     if ((first_word & 0xFF00) == 0xD800) {
-      CustomEncodedCharType first_byte = first_word & 0xFF;
-      CustomEncodedCharType second_byte = encoded_char[1] & 0xFF;
+      EncodedCharType first_byte = first_word & 0xFF;
+      EncodedCharType second_byte = encoded_char[1] & 0xFF;
 
       char32_t result = first_byte;
       result <<= 8;
@@ -321,9 +321,11 @@ struct Utf16EncodingTraits {
   }
 };
 
-template <typename CustomEncodedCharType = char32_t>
-struct Utf32EncodingTraits {
-  using encoded_char_type = CustomEncodedCharType;
+struct Utf16EncodingTraits : _Utf16EncodingTraits_Base<char16_t> {};
+
+template <typename EncodedCharType>
+struct _Utf32EncodingTraits_Base {
+  using encoded_char_type = EncodedCharType;
 
   using size_type = size_t;
 
@@ -369,13 +371,15 @@ struct Utf32EncodingTraits {
   }
 };
 
+struct Utf32EncodingTraits : _Utf32EncodingTraits_Base<char32_t> {};
+
 #ifdef _WIN32
 
-struct WideEncodingTraits : Utf16EncodingTraits<wchar_t> {};
+struct WideEncodingTraits : _Utf16EncodingTraits_Base<wchar_t> {};
 
 #else
 
-struct WideEncodingTraits : Utf32EncodingTraits<wchar_t> {};
+struct WideEncodingTraits : _Utf32EncodingTraits_Base<wchar_t> {};
 
 #endif
 
@@ -386,10 +390,10 @@ template<>
 struct EncodingTraits<char8_t> : Utf8EncodingTraits {};
 
 template<>
-struct EncodingTraits<char16_t> : Utf16EncodingTraits<char16_t> {};
+struct EncodingTraits<char16_t> : Utf16EncodingTraits {};
 
 template<>
-struct EncodingTraits<char32_t> : Utf32EncodingTraits<char32_t> {};
+struct EncodingTraits<char32_t> : Utf32EncodingTraits {};
 
 template<>
 struct EncodingTraits<wchar_t> : WideEncodingTraits {};
