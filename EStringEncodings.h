@@ -5,7 +5,7 @@
 * This file constains basic encoding traits.
 * You can see example of encoding traits class in AsciiEncodingTraits.
 * If encoding/decoding failed, 'encoding_failed' should be throwen.
-* 
+*
 * NOTE: UTF16/UTF32/WIDE encodings doesn't support different endianness.
 */
 
@@ -232,8 +232,9 @@ struct Utf8EncodingTraits {
   }
 };
 
+template <typename CustomEncodedCharType = char16_t>
 struct Utf16EncodingTraits {
-  using encoded_char_type = char16_t;
+  using encoded_char_type = CustomEncodedCharType;
 
   using size_type = size_t;
 
@@ -241,23 +242,18 @@ struct Utf16EncodingTraits {
 
   static constexpr const char* encoding_name = "utf16";
 
-  struct _internal {
-    static constexpr char16_t W1 = 0xD800, W2 = 0xDC00;
-  };
-
   static constexpr size_type char_from_utf32(char32_t original_char, encoded_char_type* dest) {
     if (original_char <= 0xFFFF) {
-      dest[0] = static_cast<char16_t>(original_char & 0xFFFF);
+      dest[0] = static_cast<CustomEncodedCharType>(original_char & 0xFFFF);
 
       return 1;
     }
     else {
+      CustomEncodedCharType character2 = static_cast<CustomEncodedCharType>(original_char - 0x10000);
 
-      char16_t character2 = static_cast<char16_t>(original_char - 0x10000);
-
-      dest[1] = _internal::W2 | (character2 & 0xFF);
+      dest[1] = 0xDC00 | (character2 & 0xFF);
       character2 >>= 8;
-      dest[0] = _internal::W1 | (character2 & 0xFF);
+      dest[0] = 0xD800 | (character2 & 0xFF);
 
       return 2;
     }
@@ -266,9 +262,9 @@ struct Utf16EncodingTraits {
   static constexpr char32_t char_to_utf32(const encoded_char_type* encoded_char) {
     encoded_char_type first_word = encoded_char[0];
 
-    if ((first_word & 0xFF00) == _internal::W1) {
-      char16_t first_byte = first_word & 0xFF;
-      char16_t second_byte = encoded_char[1] & 0xFF;
+    if ((first_word & 0xFF00) == 0xD800) {
+      CustomEncodedCharType first_byte = first_word & 0xFF;
+      CustomEncodedCharType second_byte = encoded_char[1] & 0xFF;
 
       char32_t result = first_byte;
       result <<= 8;
@@ -309,7 +305,7 @@ struct Utf16EncodingTraits {
   }
 
   static constexpr size_type char_length(const encoded_char_type* encoded_char) {
-    if ((encoded_char[0] & 0xFF00) == _internal::W1)
+    if ((encoded_char[0] & 0xFF00) == 0xD800)
       return 2;
     else
       return 1;
@@ -325,8 +321,9 @@ struct Utf16EncodingTraits {
   }
 };
 
+template <typename CustomEncodedCharType = char32_t>
 struct Utf32EncodingTraits {
-  using encoded_char_type = char32_t;
+  using encoded_char_type = CustomEncodedCharType;
 
   using size_type = size_t;
 
@@ -372,60 +369,15 @@ struct Utf32EncodingTraits {
   }
 };
 
-struct WideEncodingTraits {
-  using encoded_char_type = wchar_t;
+#ifdef _WIN32
 
-  using size_type = size_t;
+struct WideEncodingTraits : Utf16EncodingTraits<wchar_t> {};
 
-  static constexpr size_type max_encoded_size = 1;
+#else
 
-  static constexpr const char* encoding_name = "wide";
+struct WideEncodingTraits : Utf32EncodingTraits<wchar_t> {};
 
-  struct _internal {
-    static constexpr char32_t max_char = static_cast<char32_t>(static_cast<wchar_t>(~0L));
-  };
-
-  static constexpr size_type char_from_utf32(char32_t original_char, encoded_char_type* dest) {
-    if (original_char > _internal::max_char)
-      throw encoding_failed(encoding_name, "Too big character to encode it as wide character");
-
-    dest[0] = static_cast<wchar_t>(original_char & _internal::max_char);
-
-    return 1;
-  }
-
-  static constexpr char32_t char_to_utf32(const encoded_char_type* encoded_char) {
-    return static_cast<char32_t>(encoded_char[0]);
-  }
-
-  static constexpr size_type from_utf32(const char32_t* decoded_string, size_type decoded_string_size_in_utf32_chars, encoded_char_type* dest) {
-    for (size_type index = 0; index < decoded_string_size_in_utf32_chars; ++index, ++dest)
-      char_from_utf32(decoded_string[index], dest);
-
-    return decoded_string_size_in_utf32_chars;
-  }
-
-  static constexpr size_type to_utf32(const encoded_char_type* encoded_string, size_type encoded_string_size_in_chars, char32_t* dest) {
-    for (size_type index = 0; index < encoded_string_size_in_chars; ++index, ++encoded_string)
-      dest[index] = char_to_utf32(encoded_string);
-
-    return encoded_string_size_in_chars;
-  }
-
-  static constexpr size_type char_length(const encoded_char_type* encoded_char) {
-    (void)encoded_char;
-    return 1;
-  }
-
-  static constexpr size_type str_length(const encoded_char_type* string) noexcept {
-    size_type length = 0;
-
-    for (; *string; ++length)
-      ++string;
-
-    return length;
-  }
-};
+#endif
 
 template<>
 struct EncodingTraits<char> : AsciiEncodingTraits {};
@@ -434,10 +386,10 @@ template<>
 struct EncodingTraits<char8_t> : Utf8EncodingTraits {};
 
 template<>
-struct EncodingTraits<char16_t> : Utf16EncodingTraits {};
+struct EncodingTraits<char16_t> : Utf16EncodingTraits<char16_t> {};
 
 template<>
-struct EncodingTraits<char32_t> : Utf32EncodingTraits {};
+struct EncodingTraits<char32_t> : Utf32EncodingTraits<char32_t> {};
 
 template<>
 struct EncodingTraits<wchar_t> : WideEncodingTraits {};
